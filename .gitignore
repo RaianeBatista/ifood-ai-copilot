@@ -16,3 +16,7 @@ credentials/
 *.db
 *.sqlite
 *.sqlite3
+
+# Frontend build output and dependencies
+/frontend/node_modules/
+/frontend/dist/

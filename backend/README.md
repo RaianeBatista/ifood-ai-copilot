@@ -59,8 +59,9 @@ API pelo terminal do PowerShell, na pasta `backend`, com:
 - `GET /analytics/summary`: indicadores operacionais por restaurante e período.
 - `GET /analytics/forecast`: previsão diária; requer pedidos em pelo menos dois
   dias do histórico.
-- `POST /assistant/ask`: RAG e geração via provedor OpenAI-compatible; requer
-  `LLM_API_KEY`. `LLM_BASE_URL` e `LLM_MODEL` são opcionais.
+- `POST /assistant/ask`: RAG e geração via API nativa do Ollama local. Use
+  `LLM_API_KEY=ollama`, `LLM_BASE_URL=http://localhost:11434/v1` e
+  `LLM_MODEL=qwen3:1.7b` no `.env`.
 
 ## Estrutura
 

@@ -39,10 +39,10 @@ A proposta combina técnicas de **Machine Learning (ML)** e **Inteligência Arti
 | Health Check | Monitoramento básico da API | ✅ Implementado |
 | Testes automatizados | Testes de saúde, pedidos, indicadores, previsão e recuperação RAG | ✅ Implementado |
 | Gerenciamento de pedidos | Cadastro, consulta, atualização e exclusão por restaurante | ✅ Implementado |
-| Dashboard operacional | Visualização de indicadores | 📋 Planejado |
+| Dashboard operacional | Indicadores, pedidos, previsão, assistente e navegação financeira | ✅ Implementado |
 | Análise de dados | Resumo de pedidos, faturamento, status e horários de pico | ✅ Implementado |
 | Machine Learning | Previsão diária de demanda com regressão linear | ✅ Implementado |
-| Assistente GenAI | Perguntas em linguagem natural com provedor OpenAI-compatible | ✅ Implementado |
+| Assistente GenAI | Agente Prato: perguntas em linguagem natural com Ollama local | ✅ Implementado |
 | RAG | Recuperação TF-IDF de contexto operacional antes da geração | ✅ Implementado |
 
 ## 🏗️ Arquitetura
@@ -88,12 +88,12 @@ A arquitetura modular separa interface, backend, processamento inteligente e per
 - **PostgreSQL:** persistência para execução via Docker Compose.
 - **scikit-learn:** previsão de pedidos e recuperação de contexto TF-IDF.
 - **HTTPX:** chamadas assíncronas ao provedor de IA.
-- **LLMs:** geração de respostas por um provedor compatível com OpenAI Chat Completions.
+- **Ollama:** execução local pela API nativa, com geração concisa e sem thinking.
 - **Pytest:** execução de testes automatizados.
+- **React + TypeScript + Vite:** dashboard operacional responsivo.
 
 ### Tecnologias previstas
 
-- **React + TypeScript:** interface web.
 - **Embeddings e pgvector:** busca vetorial para evolução do RAG.
 
 ## 📂 Estrutura do projeto
@@ -117,7 +117,7 @@ ifood-ai-copilot/
 │   ├── requirements-dev.txt
 │   └── .gitignore
 │
-├── frontend/
+├── frontend/             # Dashboard React + TypeScript
 ├── data/                 # Banco SQLite local (ignorado pelo Git)
 ├── collections/          # Coleções Bruno e Postman (local, ignorada pelo Git)
 ├── docs/
@@ -134,6 +134,7 @@ ifood-ai-copilot/
 ### Pré-requisitos
 
 - Python 3.10+
+- Node.js 20+
 - Git
 - Visual Studio Code ou editor de sua preferência
 
@@ -209,6 +210,56 @@ A API estará disponível em:
 http://127.0.0.1:8000
 ```
 
+### Executar o dashboard
+
+Em outro terminal, instale as dependências e inicie o frontend:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+O dashboard ficará disponível em `http://127.0.0.1:5173`. Ele consulta a API
+local em `http://127.0.0.1:8000`; para outro endereço, crie
+`frontend/.env.local` com `VITE_API_BASE_URL=http://endereco-da-api`.
+No filtro do dashboard, informe o mesmo identificador de restaurante usado ao
+cadastrar os pedidos. A previsão só aparece quando há pedidos em pelo menos
+dois dias do histórico; o assistente também requer o Ollama configurado.
+
+### Gerar dados de demonstração
+
+Para popular o banco com pedidos sintéticos distribuídos pelos últimos 90 dias,
+execute na pasta `backend`:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.seed_demo_data
+```
+
+O restaurante padrão é `demo-restaurant`, igual ao filtro inicial do dashboard.
+O script não apaga pedidos existentes e pode ser executado novamente sem
+duplicar a massa. Para escolher outro restaurante ou período:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.seed_demo_data --restaurant-id meu-restaurante --days 60
+```
+
+O script usa o mesmo `DATABASE_URL` da API. Se estiver usando PostgreSQL, defina
+essa variável também no terminal que executa a carga.
+
+Se o PowerShell não reconhecer `npm` após instalar o Node.js, feche e reabra o
+terminal para atualizar o `PATH`. Se o Node estiver instalado em
+`C:\Program Files\nodejs` e ainda não aparecer no `PATH`, use na sessão atual:
+
+```powershell
+$env:Path = "C:\Program Files\nodejs;$env:Path"
+npm.cmd install
+npm.cmd run dev
+```
+
+O uso de `npm.cmd` também evita a restrição de execução de scripts que pode
+bloquear o atalho `npm.ps1` no PowerShell.
+
 ### 7. Acesse a documentação interativa
 
 O FastAPI disponibiliza documentação automática por meio do Swagger UI:
@@ -265,17 +316,20 @@ Os status de pedido aceitos são `pending`, `preparing`, `delivered` e `cancelle
 O faturamento considera somente pedidos entregues. A previsão precisa de pedidos
 registrados em pelo menos dois dias do período histórico.
 
-Para habilitar `/assistant/ask`, configure no ambiente:
+O `.env.example` usa Ollama local. Copie-o para `.env` na raiz do projeto e
+inicie o Ollama com o modelo configurado para habilitar `/assistant/ask`:
 
 ```text
-LLM_API_KEY=sua-chave
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o-mini
+LLM_API_KEY=ollama
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=qwen3:1.7b
 ```
 
-`LLM_BASE_URL` e `LLM_MODEL` são opcionais; a chave é obrigatória. O endpoint
-retorna HTTP 503 quando a chave não está configurada e 502 quando o provedor
-falha. Nunca versione credenciais.
+Também é possível copiar `.env.example` para `.env` na raiz do projeto e
+ajustar esses valores. O backend carrega esse arquivo automaticamente. No Ollama
+local, `ollama` é apenas um valor de compatibilidade e não uma chave real. O
+endpoint retorna HTTP 503 quando a variável não está configurada e 502 quando
+o provedor falha. O `.env` é ignorado pelo Git; nunca versione credenciais.
 
 Exemplo de resposta:
 
@@ -299,7 +353,7 @@ Exemplo de resposta:
 - [x] Desenvolver previsão de demanda inicial.
 - [x] Integrar IA Generativa via provedor configurável.
 - [x] Implementar recuperação de contexto RAG com TF-IDF.
-- [ ] Desenvolver interface web.
+- [x] Desenvolver interface web para indicadores, pedidos, previsão e assistente.
 - [ ] Evoluir RAG para embeddings e busca vetorial.
 - [ ] Documentar e realizar deploy da aplicação.
 

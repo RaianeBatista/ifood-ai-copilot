@@ -42,13 +42,14 @@ def test_local_ollama_uses_scoped_concise_prompt_and_disables_thinking(monkeypat
     assert captured_request["payload"]["think"] is False
     assert captured_request["payload"]["options"]["num_predict"] == MAX_RESPONSE_TOKENS
     system_prompt = captured_request["payload"]["messages"][0]["content"]
-    assert "somente sobre pedidos" in system_prompt
     assert "Seu nome é Prato" in system_prompt
     assert "pRATu" in system_prompt
     assert "PTRAOO" in system_prompt
     assert "pratooo" in system_prompt
-    assert "no máximo duas frases" in system_prompt
-    assert "não invente números" in system_prompt
+    assert "marketing" in system_prompt
+    assert "proponha um próximo passo concreto" in system_prompt
+    assert "no máximo quatro frases" in system_prompt
+    assert "Não invente números" in system_prompt
 
 
 def test_assistant_retrieves_operational_context(client, monkeypatch):

@@ -549,7 +549,7 @@ function App() {
               <div>
                 <p className="eyebrow">SEU COPILOTO</p>
                 <h2>Prato, seu copiloto de negócio.</h2>
-                <p>Respostas baseadas nos dados do restaurante selecionado.</p>
+                <p>Dados do seu restaurante, ideias práticas e ajuda com próximos passos.</p>
               </div>
             </div>
             {chatTurns.length > 0 && (
@@ -599,7 +599,7 @@ function App() {
                   setQuestion(event.target.value);
                   setAssistantError("");
                 }}
-                placeholder="Ex.: Qual foi meu faturamento nos últimos dias?"
+                placeholder="Ex.: Como posso criar uma campanha para meus clientes?"
               />
               <button type="submit" disabled={asking}>
                 {asking ? "Analisando…" : "Perguntar"}

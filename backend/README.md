@@ -63,6 +63,11 @@ API pelo terminal do PowerShell, na pasta `backend`, com:
   `LLM_API_KEY=ollama`, `LLM_BASE_URL=http://localhost:11434/v1` e
   `LLM_MODEL=qwen3:1.7b` no `.env`.
 
+## Consultas ao banco de dados
+
+Veja [consultas úteis ao banco SQLite](../docs/database-queries.md) para
+consultar e analisar os pedidos no banco local.
+
 ## Estrutura
 
 ```text

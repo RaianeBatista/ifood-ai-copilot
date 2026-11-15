@@ -229,8 +229,9 @@ dois dias do histórico; o assistente também requer o Ollama configurado.
 
 ### Gerar dados de demonstração
 
-Para popular o banco com pedidos sintéticos distribuídos pelos últimos 90 dias,
-execute na pasta `backend`:
+A API cria as tabelas do banco automaticamente ao iniciar, mas não insere pedidos
+de demonstração. Para popular o banco com pedidos sintéticos distribuídos pelos
+últimos 90 dias, execute na pasta `backend`:
 
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.seed_demo_data

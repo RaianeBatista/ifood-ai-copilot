@@ -285,6 +285,13 @@ bloquear o atalho `npm.ps1` no PowerShell.
 
 ## 🚀 Deploy no Render
 
+O projeto está publicado no Render:
+
+- **Dashboard:** [ifood-ai-copilot.onrender.com](https://ifood-ai-copilot.onrender.com/)
+- **API:** [ifood-ai-copilot-api.onrender.com](https://ifood-ai-copilot-api.onrender.com/)
+- **Health check:** [`/health`](https://ifood-ai-copilot-api.onrender.com/health)
+- **Banco de dados:** PostgreSQL gerenciado pelo Render e conectado à API pelo Blueprint.
+
 O arquivo [`render.yaml`](./render.yaml) configura a API FastAPI e um banco
 PostgreSQL gerenciado. Para criar os serviços, conecte o repositório no Render
 como um Blueprint e aplique a configuração. Informe `PROTOTYPE_USERNAME` e

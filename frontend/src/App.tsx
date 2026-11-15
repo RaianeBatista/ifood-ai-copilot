@@ -76,16 +76,17 @@ function LoginPage({ error, isSubmitting, onSubmit }: LoginPageProps) {
         <p className="eyebrow">ACESSO DE TESTE</p>
         <h1 id="login-title">Bem-vindo ao seu painel</h1>
         <p className="login-description">
-          Entre com o usuário e a senha compartilhados para testar o protótipo.
+          Entre com o e-mail e a senha compartilhados para testar o protótipo.
         </p>
         <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
           <label>
-            Usuário
+            E-mail
             <input
-              autoComplete="username"
+              autoComplete="email"
               maxLength={100}
               onChange={(event) => setUsername(event.target.value)}
               required
+              type="email"
               value={username}
             />
           </label>

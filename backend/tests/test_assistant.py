@@ -119,7 +119,11 @@ def test_assistant_retrieves_operational_context(client, monkeypatch):
     )
 
     async def fake_answer(question, context, history):
-        assert any(source == "Resumo dos últimos 90 dias" for source, _ in context)
+        period_summary = next(
+            content for source, content in context if source == "Resumo por período"
+        )
+        assert "último mês (últimos 30 dias)" in period_summary
+        assert "faturamento de pedidos entregues R$ 42.50" in period_summary
         assert history == [
             ("Quantos pedidos houve?", "Foram registrados 10 pedidos.")
         ]
@@ -143,7 +147,7 @@ def test_assistant_retrieves_operational_context(client, monkeypatch):
         },
     )
     assert response.status_code == 200
-    assert "Resumo dos últimos 90 dias" in response.json()["sources"]
+    assert "Resumo por período" in response.json()["sources"]
 
 
 def test_assistant_requires_provider_key(client, monkeypatch):

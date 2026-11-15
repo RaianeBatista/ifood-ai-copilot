@@ -356,7 +356,7 @@ Verifica se a aplicação está funcionando.
 | DELETE | `/orders/{id}?restaurant_id=...` | Exclui um pedido |
 | GET | `/analytics/summary?restaurant_id=...` | Consulta indicadores; aceita `start_date` e `end_date` |
 | GET | `/analytics/forecast?restaurant_id=...` | Prevê pedidos; aceita `days` e `history_days` |
-| POST | `/assistant/ask` | Recupera contexto operacional, considera o histórico recente e consulta o LLM |
+| POST | `/assistant/ask` | Usa o histórico recente e indicadores dos últimos 7, 30 e 90 dias para responder sobre a operação |
 
 Os status de pedido aceitos são `pending`, `preparing`, `delivered` e `cancelled`.
 O faturamento considera somente pedidos entregues. A previsão precisa de pedidos

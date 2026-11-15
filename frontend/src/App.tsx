@@ -33,6 +33,7 @@ const shortDate = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
   month: "short",
 });
+const MAX_ASSISTANT_HISTORY_TURNS = 4;
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: "Pendente",
@@ -324,6 +325,13 @@ function App() {
     }
 
     const turnId = `${Date.now()}-${chatTurns.length}`;
+    const history = chatTurns
+      .flatMap((turn) =>
+        !turn.pending && turn.answer
+          ? [{ question: turn.question, answer: turn.answer.answer }]
+          : [],
+      )
+      .slice(-MAX_ASSISTANT_HISTORY_TURNS);
     setQuestion("");
     setAsking(true);
     setAssistantError("");
@@ -333,7 +341,7 @@ function App() {
     ]);
 
     try {
-      const result = await askAssistant(selectedRestaurant, prompt);
+      const result = await askAssistant(selectedRestaurant, prompt, history);
       setChatTurns((turns) =>
         turns.map((turn) =>
           turn.id === turnId ? { ...turn, answer: result, pending: false } : turn,
@@ -789,7 +797,7 @@ function App() {
               <div>
                 <p className="eyebrow">SEU COPILOTO</p>
                 <h2>Prato, seu copiloto de negócio.</h2>
-                <p>Dados do seu restaurante, ideias práticas e ajuda com próximos passos.</p>
+                <p>Respostas curtas, uma pergunta por vez, para entender seu objetivo.</p>
               </div>
             </div>
             {chatTurns.length > 0 && (
@@ -839,7 +847,11 @@ function App() {
                   setQuestion(event.target.value);
                   setAssistantError("");
                 }}
-                placeholder="Ex.: Como posso criar uma campanha para meus clientes?"
+                placeholder={
+                  chatTurns.length > 0
+                    ? "Responda à pergunta do Prato ou peça outro próximo passo…"
+                    : "Ex.: Como posso criar uma campanha para meus clientes?"
+                }
               />
               <button type="submit" disabled={asking}>
                 {asking ? "Analisando…" : "Perguntar"}

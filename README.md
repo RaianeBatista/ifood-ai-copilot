@@ -42,7 +42,7 @@ A proposta combina técnicas de **Machine Learning (ML)** e **Inteligência Arti
 | Dashboard operacional | Indicadores, pedidos, previsão, assistente e navegação financeira | ✅ Implementado |
 | Análise de dados | Resumo de pedidos, faturamento, status e horários de pico | ✅ Implementado |
 | Machine Learning | Previsão diária de demanda com regressão linear | ✅ Implementado |
-| Assistente GenAI | Agente Prato: perguntas em linguagem natural com Ollama local | ✅ Implementado |
+| Assistente GenAI | Prato: respostas curtas e contextuais, com bate-volta e histórico recente | ✅ Implementado |
 | RAG | Recuperação TF-IDF de contexto operacional antes da geração | ✅ Implementado |
 
 ## 🏗️ Arquitetura
@@ -356,7 +356,7 @@ Verifica se a aplicação está funcionando.
 | DELETE | `/orders/{id}?restaurant_id=...` | Exclui um pedido |
 | GET | `/analytics/summary?restaurant_id=...` | Consulta indicadores; aceita `start_date` e `end_date` |
 | GET | `/analytics/forecast?restaurant_id=...` | Prevê pedidos; aceita `days` e `history_days` |
-| POST | `/assistant/ask` | Recupera contexto operacional e consulta o LLM |
+| POST | `/assistant/ask` | Recupera contexto operacional, considera o histórico recente e consulta o LLM |
 
 Os status de pedido aceitos são `pending`, `preparing`, `delivered` e `cancelled`.
 O faturamento considera somente pedidos entregues. A previsão precisa de pedidos

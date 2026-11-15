@@ -35,6 +35,11 @@ export interface AssistantAnswer {
   sources: string[];
 }
 
+export interface AssistantConversationTurn {
+  question: string;
+  answer: string;
+}
+
 export interface AccessToken {
   access_token: string;
   token_type: "bearer";

@@ -21,9 +21,13 @@ async def ask_assistant(
     db: Session = Depends(get_db),
 ) -> AssistantAnswer:
     ensure_restaurant_access(payload.restaurant_id, account)
-    context = retrieve_operational_context(db, payload.restaurant_id, payload.question)
+    history = [(turn.question, turn.answer) for turn in payload.history]
+    context_query = " ".join(
+        [*(question for question, _ in history), payload.question]
+    )
+    context = retrieve_operational_context(db, payload.restaurant_id, context_query)
     try:
-        answer = await generate_grounded_answer(payload.question, context)
+        answer = await generate_grounded_answer(payload.question, context, history)
     except MissingLLMConfigurationError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except LLMProviderError as exc:

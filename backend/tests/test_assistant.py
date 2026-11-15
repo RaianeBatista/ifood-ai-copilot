@@ -5,7 +5,7 @@ import httpx
 from app.services.assistant import MAX_RESPONSE_TOKENS, generate_grounded_answer
 
 
-def test_local_ollama_uses_scoped_concise_prompt_and_disables_thinking(monkeypatch):
+def test_local_ollama_uses_history_and_concise_interactive_prompt(monkeypatch):
     monkeypatch.setenv("LLM_API_KEY", "ollama")
     monkeypatch.setenv("LLM_BASE_URL", "http://localhost:11434/v1")
     monkeypatch.setenv("LLM_MODEL", "qwen3:1.7b")
@@ -32,8 +32,9 @@ def test_local_ollama_uses_scoped_concise_prompt_and_disables_thinking(monkeypat
 
     answer = asyncio.run(
         generate_grounded_answer(
-            "Quantos pedidos foram registrados?",
+            "E no fim de semana?",
             [("Resumo", "Nos últimos 90 dias foram registrados dois pedidos.")],
+            [("Quantos pedidos foram registrados?", "Foram registrados dois pedidos.")],
         )
     )
 
@@ -41,15 +42,22 @@ def test_local_ollama_uses_scoped_concise_prompt_and_disables_thinking(monkeypat
     assert captured_request["url"] == "http://localhost:11434/api/chat"
     assert captured_request["payload"]["think"] is False
     assert captured_request["payload"]["options"]["num_predict"] == MAX_RESPONSE_TOKENS
-    system_prompt = captured_request["payload"]["messages"][0]["content"]
+    messages = captured_request["payload"]["messages"]
+    system_prompt = messages[0]["content"]
     assert "Seu nome é Prato" in system_prompt
     assert "pRATu" in system_prompt
     assert "PTRAOO" in system_prompt
     assert "pratooo" in system_prompt
     assert "marketing" in system_prompt
-    assert "proponha um próximo passo concreto" in system_prompt
-    assert "no máximo quatro frases" in system_prompt
+    assert "uma única pergunta curta e relevante" in system_prompt
+    assert "45 palavras" in system_prompt
+    assert "histórico apenas para manter a continuidade" in system_prompt
     assert "Não invente números" in system_prompt
+    assert messages[1:] == [
+        {"role": "user", "content": "Quantos pedidos foram registrados?"},
+        {"role": "assistant", "content": "Foram registrados dois pedidos."},
+        {"role": "user", "content": "E no fim de semana?"},
+    ]
 
 
 def test_assistant_retrieves_operational_context(client, monkeypatch):
@@ -63,8 +71,11 @@ def test_assistant_retrieves_operational_context(client, monkeypatch):
         },
     )
 
-    async def fake_answer(question, context):
+    async def fake_answer(question, context, history):
         assert any(source == "Resumo dos últimos 90 dias" for source, _ in context)
+        assert history == [
+            ("Quantos pedidos houve?", "Foram registrados 10 pedidos.")
+        ]
         return "O faturamento recuperado foi R$ 42,50."
 
     monkeypatch.setattr(
@@ -73,7 +84,16 @@ def test_assistant_retrieves_operational_context(client, monkeypatch):
     )
     response = client.post(
         "/assistant/ask",
-        json={"restaurant_id": "restaurante-1", "question": "Qual foi o faturamento?"},
+        json={
+            "restaurant_id": "restaurante-1",
+            "question": "E quanto foi o faturamento?",
+            "history": [
+                {
+                    "question": "Quantos pedidos houve?",
+                    "answer": "Foram registrados 10 pedidos.",
+                }
+            ],
+        },
     )
     assert response.status_code == 200
     assert "Resumo dos últimos 90 dias" in response.json()["sources"]
@@ -87,3 +107,21 @@ def test_assistant_requires_provider_key(client, monkeypatch):
     )
     assert response.status_code == 503
     assert "LLM_API_KEY" in response.json()["detail"]
+
+
+def test_assistant_limits_conversation_history(client):
+    history = [
+        {"question": f"Pergunta {index}?", "answer": f"Resposta {index}."}
+        for index in range(5)
+    ]
+
+    response = client.post(
+        "/assistant/ask",
+        json={
+            "restaurant_id": "restaurante-1",
+            "question": "Qual o próximo passo?",
+            "history": history,
+        },
+    )
+
+    assert response.status_code == 422

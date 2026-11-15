@@ -1,6 +1,7 @@
 import type {
   AccessToken,
   AssistantAnswer,
+  AssistantConversationTurn,
   CurrentAccount,
   ForecastItem,
   OperationalSummary,
@@ -122,10 +123,11 @@ export function getForecast(restaurantId: string): Promise<ForecastItem[]> {
 export function askAssistant(
   restaurantId: string,
   question: string,
+  history: AssistantConversationTurn[],
 ): Promise<AssistantAnswer> {
   return request<AssistantAnswer>("/assistant/ask", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ restaurant_id: restaurantId, question }),
+    body: JSON.stringify({ restaurant_id: restaurantId, question, history }),
   });
 }

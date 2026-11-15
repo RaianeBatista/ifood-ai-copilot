@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: ifood-ai-copilot-api
+    runtime: python
+    plan: free
+    region: ohio
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ifood-ai-copilot-db
+          property: connectionString
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+      - key: PROTOTYPE_USERNAME
+        sync: false
+      - key: PROTOTYPE_PASSWORD
+        sync: false
+      - key: AUTH_RESTAURANT_ID
+        value: demo-restaurant
+      - key: FRONTEND_ORIGINS
+        sync: false
+
+databases:
+  - name: ifood-ai-copilot-db
+    databaseName: ifood_ai_copilot
+    user: ifood_ai_copilot
+    plan: free
+    region: ohio

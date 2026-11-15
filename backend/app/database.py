@@ -13,9 +13,25 @@ load_dotenv(PROJECT_ROOT / ".env")
 DATA_DIR = PROJECT_ROOT / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-DATABASE_URL = os.getenv("DATABASE_URL") or URL.create(
-    "sqlite",
-    database=str(DATA_DIR / "ifood_ai_copilot.db"),
+
+def _normalize_database_url(database_url: str | URL) -> URL:
+    parsed_url = make_url(database_url)
+    if parsed_url.drivername == "postgres":
+        parsed_url = parsed_url.set(drivername="postgresql")
+    if (
+        parsed_url.get_backend_name() == "postgresql"
+        and parsed_url.get_driver_name() == "psycopg2"
+    ):
+        return parsed_url.set(drivername="postgresql+psycopg")
+    return parsed_url
+
+
+DATABASE_URL = _normalize_database_url(
+    os.getenv("DATABASE_URL")
+    or URL.create(
+        "sqlite",
+        database=str(DATA_DIR / "ifood_ai_copilot.db"),
+    )
 )
 engine_options = (
     {"connect_args": {"check_same_thread": False}}

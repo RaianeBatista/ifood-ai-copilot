@@ -283,6 +283,29 @@ npm.cmd run dev
 O uso de `npm.cmd` também evita a restrição de execução de scripts que pode
 bloquear o atalho `npm.ps1` no PowerShell.
 
+## 🚀 Deploy no Render
+
+O arquivo [`render.yaml`](./render.yaml) configura a API FastAPI e um banco
+PostgreSQL gerenciado. Para criar os serviços, conecte o repositório no Render
+como um Blueprint e aplique a configuração. Informe `PROTOTYPE_USERNAME` e
+`PROTOTYPE_PASSWORD` como variáveis secretas. Se o dashboard ainda não estiver
+hospedado, use `http://localhost:5173` temporariamente em `FRONTEND_ORIGINS`;
+depois substitua pela origem exata do dashboard público, incluindo `https://`
+e sem barra no final. A chave `AUTH_SECRET_KEY` é gerada automaticamente.
+
+Após o deploy, valide `https://<url-da-api>/health`. O dashboard pode ser
+publicado como Static Site separado no Render, usando a pasta `frontend`, o
+comando de build `npm ci && npm run build` e a pasta publicada `dist`. Configure
+`VITE_API_BASE_URL` no build do frontend com `https://<url-da-api>` e atualize
+`FRONTEND_ORIGINS` no serviço da API para a URL pública do Static Site.
+
+O Blueprint usa instâncias gratuitas para demonstração: a API pode hibernar
+quando não recebe tráfego e o PostgreSQL gratuito expira após 30 dias. Não use
+essa configuração para produção nem para dados reais; faça upgrade do banco e
+dos serviços antes de depender deles. A conta compartilhada continua sendo
+apenas para protótipo. O assistente também requer um provedor de IA acessível
+pela internet; o Ollama em `localhost` não estará disponível no Render.
+
 ### 7. Acesse a documentação interativa
 
 O FastAPI disponibiliza documentação automática por meio do Swagger UI:
@@ -377,8 +400,9 @@ Exemplo de resposta:
 - [x] Integrar IA Generativa via provedor configurável.
 - [x] Implementar recuperação de contexto RAG com TF-IDF.
 - [x] Desenvolver interface web para indicadores, pedidos, previsão e assistente.
+- [x] Documentar a configuração de deploy da API no Render.
 - [ ] Evoluir RAG para embeddings e busca vetorial.
-- [ ] Documentar e realizar deploy da aplicação.
+- [ ] Publicar e validar a aplicação em um ambiente hospedado.
 
 ## 💡 Diferenciais técnicos
 

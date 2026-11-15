@@ -141,6 +141,7 @@ function App() {
   const [loginError, setLoginError] = useState("");
   const [loginSubmitting, setLoginSubmitting] = useState(false);
   const [preparingDashboard, setPreparingDashboard] = useState(false);
+  const [logoutSubmitting, setLogoutSubmitting] = useState(false);
   const [restaurantId, setRestaurantId] = useState("");
   const [period, setPeriod] = useState(30);
   const [summary, setSummary] = useState<OperationalSummary | null>(null);
@@ -223,14 +224,24 @@ function App() {
     }
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    if (logoutSubmitting) {
+      return;
+    }
+
+    setLogoutSubmitting(true);
     clearAccessToken();
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 800);
+    });
     setAccount(null);
     setRestaurantId("");
     setSummary(null);
     setOrders([]);
     setForecast([]);
     setChatTurns([]);
+    setLoginError("");
+    setLogoutSubmitting(false);
   }
 
   const loadDashboard = useCallback(async () => {
@@ -448,8 +459,13 @@ function App() {
           </div>
           <div className="header-actions">
             <span className="account-name">{account.username}</span>
-            <button className="logout-action" type="button" onClick={handleLogout}>
-              Sair
+            <button
+              className="logout-action"
+              type="button"
+              onClick={() => void handleLogout()}
+              disabled={logoutSubmitting}
+            >
+              {logoutSubmitting ? "Saindo…" : "Sair"}
             </button>
             <button
               className="header-action"

@@ -241,6 +241,11 @@ select:focus-visible {
   text-decoration: underline;
 }
 
+.logout-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;

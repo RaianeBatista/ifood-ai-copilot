@@ -2,7 +2,11 @@ import asyncio
 
 import httpx
 
-from app.services.assistant import MAX_RESPONSE_TOKENS, generate_grounded_answer
+from app.services.assistant import (
+    MAX_GROQ_COMPLETION_TOKENS,
+    MAX_RESPONSE_TOKENS,
+    generate_grounded_answer,
+)
 
 
 def test_local_ollama_uses_history_and_concise_interactive_prompt(monkeypatch):
@@ -58,6 +62,49 @@ def test_local_ollama_uses_history_and_concise_interactive_prompt(monkeypatch):
         {"role": "assistant", "content": "Foram registrados dois pedidos."},
         {"role": "user", "content": "E no fim de semana?"},
     ]
+
+
+def test_groq_gpt_oss_requests_hidden_reasoning_and_completion_budget(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+    monkeypatch.setenv("LLM_MODEL", "openai/gpt-oss-20b")
+    captured_request = {}
+
+    class MockAsyncClient:
+        def __init__(self, timeout):
+            assert timeout == 30.0
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            return None
+
+        async def post(self, url, *, headers, json):
+            captured_request.update(url=url, headers=headers, payload=json)
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [
+                        {"message": {"content": "Oi! Como posso ajudar?"}}
+                    ]
+                },
+            )
+
+    monkeypatch.setattr("app.services.assistant.httpx.AsyncClient", MockAsyncClient)
+
+    answer = asyncio.run(generate_grounded_answer("Oi Prato", []))
+
+    assert answer == "Oi! Como posso ajudar?"
+    assert captured_request["url"] == (
+        "https://api.groq.com/openai/v1/chat/completions"
+    )
+    assert captured_request["payload"]["max_completion_tokens"] == (
+        MAX_GROQ_COMPLETION_TOKENS
+    )
+    assert captured_request["payload"]["reasoning_effort"] == "low"
+    assert captured_request["payload"]["reasoning_format"] == "hidden"
+    assert "max_tokens" not in captured_request["payload"]
 
 
 def test_assistant_retrieves_operational_context(client, monkeypatch):

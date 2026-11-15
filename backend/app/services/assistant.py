@@ -23,6 +23,7 @@ class LLMProviderError(Exception):
 
 
 MAX_RESPONSE_TOKENS = 160
+MAX_GROQ_COMPLETION_TOKENS = 512
 
 
 def build_system_prompt(context_text: str) -> str:
@@ -120,6 +121,10 @@ async def generate_grounded_answer(
         parsed_base_url.hostname in {"localhost", "127.0.0.1"}
         and parsed_base_url.port == 11434
     )
+    is_groq_gpt_oss = (
+        parsed_base_url.hostname == "api.groq.com"
+        and model.startswith("openai/gpt-oss-")
+    )
     context_text = "\n\n".join(f"[{source}] {text}" for source, text in context)
     if not context_text:
         context_text = "Não há informações operacionais relevantes nos dados para responder."
@@ -151,9 +156,16 @@ async def generate_grounded_answer(
             "model": model,
             "messages": messages,
             "temperature": 0.1,
-            "max_tokens": MAX_RESPONSE_TOKENS,
             "stream": False,
         }
+        if is_groq_gpt_oss:
+            payload.update(
+                max_completion_tokens=MAX_GROQ_COMPLETION_TOKENS,
+                reasoning_effort="low",
+                reasoning_format="hidden",
+            )
+        else:
+            payload["max_tokens"] = MAX_RESPONSE_TOKENS
         headers = {"Authorization": f"Bearer {api_key}"}
 
     try:

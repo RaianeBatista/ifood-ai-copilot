@@ -24,7 +24,7 @@ def test_order_crud_and_restaurant_isolation(client):
     hidden = client.get(
         f"/orders/{order['id']}", params={"restaurant_id": "outro-restaurante"}
     )
-    assert hidden.status_code == 404
+    assert hidden.status_code == 403
 
     updated = client.patch(
         f"/orders/{order['id']}",

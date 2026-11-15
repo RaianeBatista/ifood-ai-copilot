@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { askAssistant, getForecast, getOrders, getSummary } from "./api";
+import {
+  askAssistant,
+  clearAccessToken,
+  getCurrentAccount,
+  getForecast,
+  getOrders,
+  getSummary,
+  hasAccessToken,
+  login,
+  storeAccessToken,
+} from "./api";
 import type {
+  CurrentAccount,
   AssistantAnswer,
   ForecastItem,
   OperationalSummary,
@@ -38,9 +49,98 @@ interface ChatTurn {
   pending: boolean;
 }
 
+interface LoginPageProps {
+  error: string;
+  isSubmitting: boolean;
+  onSubmit: (username: string, password: string) => Promise<void>;
+}
+
+function LoginPage({ error, isSubmitting, onSubmit }: LoginPageProps) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await onSubmit(username.trim(), password);
+  }
+
+  return (
+    <main className="auth-page">
+      <section className="login-card" aria-labelledby="login-title">
+        <a className="brand login-brand" href="/" aria-label="iFood AI Copilot">
+          <span className="brand-name">iFood</span>
+          <span className="brand-divider" />
+          <span className="brand-product">AI Copilot</span>
+        </a>
+        <p className="eyebrow">ACESSO DE TESTE</p>
+        <h1 id="login-title">Bem-vindo ao seu painel</h1>
+        <p className="login-description">
+          Entre com o usuário e a senha compartilhados para testar o protótipo.
+        </p>
+        <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
+          <label>
+            Usuário
+            <input
+              autoComplete="username"
+              maxLength={100}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+              value={username}
+            />
+          </label>
+          <label>
+            Senha
+            <span className="password-field">
+              <input
+                autoComplete="current-password"
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                type={showPassword ? "text" : "password"}
+                value={password}
+              />
+              <button
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                aria-pressed={showPassword}
+                className="password-visibility"
+                onClick={() => setShowPassword((visible) => !visible)}
+                type="button"
+              >
+                {showPassword ? (
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8" />
+                    <path d="M9.9 5.2A10.8 10.8 0 0112 5c5.5 0 9 7 9 7a15.7 15.7 0 01-3 3.8M6.2 6.2C3.9 7.8 3 12 3 12s3.5 7 9 7a9.5 9.5 0 004.1-.9" />
+                  </svg>
+                ) : (
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z" />
+                    <circle cx="12" cy="12" r="2.5" />
+                  </svg>
+                )}
+              </button>
+            </span>
+          </label>
+          {error && <p className="login-error" role="alert">{error}</p>}
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Entrando…" : "Entrar"}
+            <span aria-hidden="true">→</span>
+          </button>
+        </form>
+        <p className="login-note">
+          Esta conta de demonstração dá acesso ao mesmo restaurante de teste.
+        </p>
+      </section>
+    </main>
+  );
+}
+
 function App() {
-  const [restaurantId, setRestaurantId] = useState("demo-restaurant");
-  const [restaurantInput, setRestaurantInput] = useState("demo-restaurant");
+  const [account, setAccount] = useState<CurrentAccount | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
+  const [preparingDashboard, setPreparingDashboard] = useState(false);
+  const [restaurantId, setRestaurantId] = useState("");
   const [period, setPeriod] = useState(30);
   const [summary, setSummary] = useState<OperationalSummary | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -54,7 +154,88 @@ function App() {
   const [asking, setAsking] = useState(false);
   const conversationEndRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    function handleSessionExpired() {
+      setAccount(null);
+      setRestaurantId("");
+      setLoginError("Sua sessão expirou. Entre novamente para continuar.");
+    }
+
+    window.addEventListener("auth-expired", handleSessionExpired);
+    let active = true;
+    async function restoreSession() {
+      if (!hasAccessToken()) {
+        setAuthReady(true);
+        return;
+      }
+
+      try {
+        const currentAccount = await getCurrentAccount();
+        if (active) {
+          setAccount(currentAccount);
+          setRestaurantId(currentAccount.restaurant_id);
+        }
+      } catch (restoreError) {
+        if (active) {
+          setLoginError(
+            restoreError instanceof Error
+              ? `Não foi possível restaurar a sessão: ${restoreError.message}`
+              : "Não foi possível restaurar a sessão.",
+          );
+        }
+      } finally {
+        if (active) {
+          setAuthReady(true);
+        }
+      }
+    }
+
+    void restoreSession();
+    return () => {
+      active = false;
+      window.removeEventListener("auth-expired", handleSessionExpired);
+    };
+  }, []);
+
+  async function handleLogin(username: string, password: string) {
+    setLoginSubmitting(true);
+    setLoginError("");
+    try {
+      const token = await login(username, password);
+      storeAccessToken(token.access_token);
+      const currentAccount = await getCurrentAccount();
+      setPreparingDashboard(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 1600));
+      setAccount(currentAccount);
+      setRestaurantId(currentAccount.restaurant_id);
+      setPreparingDashboard(false);
+    } catch (loginRequestError) {
+      clearAccessToken();
+      setPreparingDashboard(false);
+      setLoginError(
+        loginRequestError instanceof Error
+          ? loginRequestError.message
+          : "Não foi possível entrar. Tente novamente.",
+      );
+    } finally {
+      setLoginSubmitting(false);
+    }
+  }
+
+  function handleLogout() {
+    clearAccessToken();
+    setAccount(null);
+    setRestaurantId("");
+    setSummary(null);
+    setOrders([]);
+    setForecast([]);
+    setChatTurns([]);
+  }
+
   const loadDashboard = useCallback(async () => {
+    if (!account) {
+      return;
+    }
     const selectedRestaurant = restaurantId.trim();
     if (!selectedRestaurant) {
       setError("Informe o identificador do restaurante.");
@@ -102,11 +283,13 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [period, restaurantId]);
+  }, [account, period, restaurantId]);
 
   useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
+    if (account) {
+      void loadDashboard();
+    }
+  }, [account, loadDashboard]);
 
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({
@@ -117,7 +300,7 @@ function App() {
 
   async function handleAsk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (asking) {
+    if (asking || !account) {
       return;
     }
 
@@ -171,6 +354,41 @@ function App() {
     1,
     ...forecast.map((item) => item.predicted_orders),
   );
+
+  if (!authReady) {
+    return (
+      <main className="auth-page">
+        <p role="status">Verificando sua sessão…</p>
+      </main>
+    );
+  }
+
+  if (preparingDashboard) {
+    return (
+      <main className="auth-page">
+        <section className="dashboard-loading" role="status" aria-live="polite">
+          <a className="brand login-brand" href="/" aria-label="iFood AI Copilot">
+            <span className="brand-name">iFood</span>
+            <span className="brand-divider" />
+            <span className="brand-product">AI Copilot</span>
+          </a>
+          <span className="loading-spinner" aria-hidden="true" />
+          <h1>Preparando seu painel</h1>
+          <p>Estamos organizando os dados do seu restaurante…</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!account) {
+    return (
+      <LoginPage
+        error={loginError}
+        isSubmitting={loginSubmitting}
+        onSubmit={handleLogin}
+      />
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -227,15 +445,21 @@ function App() {
           <div className="breadcrumb">
             iFood AI Copilot <span>/</span> Painel do restaurante
           </div>
-          <button
-            className="header-action"
-            type="button"
-            onClick={() => void loadDashboard()}
-            disabled={loading}
-          >
-            {loading ? "Atualizando…" : "Atualizar dados"}
-            <span aria-hidden="true">↗</span>
-          </button>
+          <div className="header-actions">
+            <span className="account-name">{account.username}</span>
+            <button className="logout-action" type="button" onClick={handleLogout}>
+              Sair
+            </button>
+            <button
+              className="header-action"
+              type="button"
+              onClick={() => void loadDashboard()}
+              disabled={loading}
+            >
+              {loading ? "Atualizando…" : "Atualizar dados"}
+              <span aria-hidden="true">↗</span>
+            </button>
+          </div>
         </header>
 
         <main id="main">
@@ -263,16 +487,15 @@ function App() {
               className="hero-filters"
               onSubmit={(event) => {
                 event.preventDefault();
-                setRestaurantId(restaurantInput.trim());
+                void loadDashboard();
               }}
             >
               <label className="filter-field restaurant-filter">
-                <span>Restaurante</span>
+                <span>Restaurante da conta</span>
                 <input
                   aria-label="Identificador do restaurante"
-                  value={restaurantInput}
-                  onChange={(event) => setRestaurantInput(event.target.value)}
-                  placeholder="Ex.: restaurante-01"
+                  readOnly
+                  value={restaurantId}
                 />
               </label>
               <label className="filter-field">

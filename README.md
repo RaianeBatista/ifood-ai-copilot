@@ -176,6 +176,24 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### Configure a conta compartilhada de teste
+
+Se ainda não existir, copie `.env.example` para `.env` na raiz do projeto;
+se já existir, apenas acrescente as variáveis de autenticação. Defina um usuário
+e uma senha para compartilhar com os testadores. Gere uma chave de autenticação com:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Preencha `PROTOTYPE_USERNAME`, `PROTOTYPE_PASSWORD` e `AUTH_SECRET_KEY` no
+`.env`. `AUTH_RESTAURANT_ID` define qual restaurante a conta pode acessar
+(`demo-restaurant` por padrão). Todos os testadores usam a mesma conta e os
+mesmos dados; não compartilhe credenciais reais nem versione o arquivo `.env`.
+Em hospedagem, configure esses valores como variáveis de ambiente e troque
+`FRONTEND_ORIGINS` pela origem pública exata do dashboard. Use HTTPS na
+hospedagem e não use esta conta compartilhada para dados reais de clientes.
+
 ### 6. Execute a aplicação (SQLite local)
 
 Na pasta `backend`, execute:
@@ -209,6 +227,10 @@ A API estará disponível em:
 ```text
 http://127.0.0.1:8000
 ```
+
+O dashboard apresenta a tela de login. A API exige o token de autenticação nas
+rotas de pedidos, indicadores e assistente; somente o health check e o login
+são públicos.
 
 ### Executar o dashboard
 

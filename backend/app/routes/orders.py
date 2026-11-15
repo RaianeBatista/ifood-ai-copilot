@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
+from app.auth import DemoAccount, ensure_restaurant_access, get_current_account
 from app.database import get_db
 from app.models import Order
 from app.schemas.order import OrderCreate, OrderRead, OrderUpdate
@@ -23,7 +24,12 @@ def find_order_or_404(db: Session, restaurant_id: str, order_id: str) -> Order:
 
 
 @router.post("", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
-def create_order_endpoint(payload: OrderCreate, db: Session = Depends(get_db)) -> Order:
+def create_order_endpoint(
+    payload: OrderCreate,
+    account: DemoAccount = Depends(get_current_account),
+    db: Session = Depends(get_db),
+) -> Order:
+    ensure_restaurant_access(payload.restaurant_id, account)
     return create_order(db, payload)
 
 
@@ -32,8 +38,10 @@ def list_orders_endpoint(
     restaurant_id: str = Query(min_length=1, max_length=100),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    account: DemoAccount = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> list[Order]:
+    ensure_restaurant_access(restaurant_id, account)
     return list_orders(db, restaurant_id, limit, offset)
 
 
@@ -41,8 +49,10 @@ def list_orders_endpoint(
 def get_order_endpoint(
     order_id: str,
     restaurant_id: str = Query(min_length=1, max_length=100),
+    account: DemoAccount = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> Order:
+    ensure_restaurant_access(restaurant_id, account)
     return find_order_or_404(db, restaurant_id, order_id)
 
 
@@ -51,8 +61,10 @@ def update_order_endpoint(
     order_id: str,
     payload: OrderUpdate,
     restaurant_id: str = Query(min_length=1, max_length=100),
+    account: DemoAccount = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> Order:
+    ensure_restaurant_access(restaurant_id, account)
     order = find_order_or_404(db, restaurant_id, order_id)
     return update_order(db, order, payload)
 
@@ -61,8 +73,10 @@ def update_order_endpoint(
 def delete_order_endpoint(
     order_id: str,
     restaurant_id: str = Query(min_length=1, max_length=100),
+    account: DemoAccount = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> Response:
+    ensure_restaurant_access(restaurant_id, account)
     order = find_order_or_404(db, restaurant_id, order_id)
     delete_order(db, order)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

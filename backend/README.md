@@ -54,6 +54,8 @@ API pelo terminal do PowerShell, na pasta `backend`, com:
 
 ## Endpoints
 
+- `POST /auth/login`: inicia sessão na conta de protótipo.
+- `GET /auth/me`: retorna o usuário e o restaurante da sessão.
 - `POST`, `GET`, `PATCH` e `DELETE /orders`: gerenciamento de pedidos; informe
   `restaurant_id` nas consultas, atualizações e exclusões.
 - `GET /analytics/summary`: indicadores operacionais por restaurante e período.
@@ -62,6 +64,11 @@ API pelo terminal do PowerShell, na pasta `backend`, com:
 - `POST /assistant/ask`: RAG e geração via API nativa do Ollama local. Use
   `LLM_API_KEY=ollama`, `LLM_BASE_URL=http://localhost:11434/v1` e
   `LLM_MODEL=qwen3:1.7b` no `.env`.
+
+Somente `/health` e `/auth/login` são públicos. As demais rotas exigem
+`Authorization: Bearer <token>` e só permitem acessar o restaurante configurado
+em `AUTH_RESTAURANT_ID`. A conta é compartilhada para testes; não há cadastro
+público.
 
 ## Consultas ao banco de dados
 

@@ -1,16 +1,32 @@
 import type {
+  AccessToken,
   AssistantAnswer,
+  CurrentAccount,
   ForecastItem,
   OperationalSummary,
   Order,
 } from "./types";
 
+const accessTokenStorageKey = "ifood-ai-copilot-access-token";
 const apiBaseUrl = (
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000"
 ).replace(/\/+$/, "");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, init);
+  const headers = new Headers(init?.headers);
+  const accessToken = sessionStorage.getItem(accessTokenStorageKey);
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers });
+  if (response.status === 401 && path !== "/auth/login") {
+    sessionStorage.removeItem(accessTokenStorageKey);
+    window.dispatchEvent(new Event("auth-expired"));
+  }
 
   if (!response.ok) {
     const body = await response.text();
@@ -31,6 +47,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+export function hasAccessToken(): boolean {
+  return sessionStorage.getItem(accessTokenStorageKey) !== null;
+}
+
+export function storeAccessToken(accessToken: string): void {
+  sessionStorage.setItem(accessTokenStorageKey, accessToken);
+}
+
+export function clearAccessToken(): void {
+  sessionStorage.removeItem(accessTokenStorageKey);
+}
+
+export function login(username: string, password: string): Promise<AccessToken> {
+  return request<AccessToken>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function getCurrentAccount(): Promise<CurrentAccount> {
+  return request<CurrentAccount>("/auth/me");
 }
 
 function formatDate(date: Date): string {

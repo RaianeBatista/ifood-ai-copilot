@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.auth import DemoAccount, ensure_restaurant_access, get_current_account
 from app.database import get_db
 from app.schemas.assistant import AssistantAnswer, AssistantQuestion
 from app.services.assistant import (
@@ -15,8 +16,11 @@ router = APIRouter(prefix="/assistant", tags=["assistant"])
 
 @router.post("/ask", response_model=AssistantAnswer)
 async def ask_assistant(
-    payload: AssistantQuestion, db: Session = Depends(get_db)
+    payload: AssistantQuestion,
+    account: DemoAccount = Depends(get_current_account),
+    db: Session = Depends(get_db),
 ) -> AssistantAnswer:
+    ensure_restaurant_access(payload.restaurant_id, account)
     context = retrieve_operational_context(db, payload.restaurant_id, payload.question)
     try:
         answer = await generate_grounded_answer(payload.question, context)

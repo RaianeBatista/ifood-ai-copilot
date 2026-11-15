@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.auth import DemoAccount, ensure_restaurant_access, get_current_account
 from app.database import get_db
 from app.schemas.order import OperationalSummary
 from app.services.analytics import orders_for_period, summarize_orders
@@ -16,8 +17,10 @@ def operational_summary(
     restaurant_id: str = Query(min_length=1, max_length=100),
     start_date: date | None = None,
     end_date: date | None = None,
+    account: DemoAccount = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> OperationalSummary:
+    ensure_restaurant_access(restaurant_id, account)
     if start_date is not None and end_date is not None and start_date > end_date:
         raise HTTPException(status_code=422, detail="start_date deve ser anterior a end_date.")
     orders = orders_for_period(db, restaurant_id, start_date, end_date)
@@ -29,8 +32,10 @@ def demand_forecast(
     restaurant_id: str = Query(min_length=1, max_length=100),
     days: int = Query(default=7, ge=1, le=30),
     history_days: int = Query(default=90, ge=7, le=365),
+    account: DemoAccount = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
+    ensure_restaurant_access(restaurant_id, account)
     try:
         forecast = forecast_daily_orders(db, restaurant_id, history_days, days)
     except ValueError as exc:
